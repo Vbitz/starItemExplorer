@@ -74,8 +74,19 @@
 		});
 	};
 
-	window.sbResolvePath = function (p1, p2) {
-		p1 = p1.substring(0, p1.lastIndexOf("/"));
-		return path.join(p1, p2);
-	}
+	window.sbResolvePath = function (basePath, p1, p2, cb) {
+		if (p1.indexOf(basePath) !== 0) {
+			cb("");
+		} else {
+			p1 = p1.substring(0, p1.lastIndexOf("/"));
+			var pth = path.join(p1, p2);
+			fs.exists(pth, function (e) {
+				if (e) {
+					cb(pth);
+				} else {
+					sbResolvePath(basePath, p1.substring(0, p1.lastIndexOf("/")), p2, cb);
+				}
+			});
+		}
+	};
 })(window);

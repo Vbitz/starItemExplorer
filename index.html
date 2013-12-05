@@ -147,7 +147,9 @@
 			var imgCon = document.createElement("td");
 			if (typeof res["inventoryIcon"] === "string" && res["inventoryIcon"].indexOf(":") === -1) {
 				var img = document.createElement("img");
-				img.src = path.join(sbResolvePath(i, res["inventoryIcon"]));
+				sbResolvePath(defaultPath, i, res["inventoryIcon"], function (pth) {
+					img.src = pth;
+				});
 				imgCon.appendChild(img);
 			} else if (res["inventoryIcon"] !== undefined) {
 				//imgCon.innerText = res["inventoryIcon"];
@@ -201,6 +203,14 @@
 		items.forEach(function (i) {
 			setTimeout(function () {
 				loadItem(i, "objectName");
+			}, Math.random() * 25000);
+		});
+	});
+
+	getAllConfigs(path.join(defaultPath, "tech"), {".techitem": true}, false, function (items) {
+		items.forEach(function (i) {
+			setTimeout(function () {
+				loadItem(i, "itemName");
 			}, Math.random() * 25000);
 		});
 	});
