@@ -1,0 +1,11 @@
+{
+  "name": "starExplorer",
+  "main": "index.html",
+  "version": "0.1.0",
+  "description": "Explore items in Starbound",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vbitz",
+  "license": "Apache"
+}

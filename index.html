@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Star Explorer</title>
+
+	<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.2/css/bootstrap.css">
+
+	<style type="text/css">
+	.rarity-Common {
+		color: #808080;
+	}
+
+	.rarity-Uncommon {
+		color: #10ff10;
+	}
+
+	.rarity-Rare {
+		color: #ff1010;
+	}
+
+	.rarity-Legendary {
+		color: #ff10ff;
+	}
+	</style>
+
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.2/js/bootstrap.js"></script>
+</head>
+<body>
+	<!-- Modal -->
+	<div class="modal" id="itemModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title" id="itemModalLabel">Modal title</h4>
+				</div>
+				<div class="modal-body">
+					<h2>Item Code</h2>
+					<pre id="itemModalCode"></pre>
+					<h2>Item Recipes</h2>
+					<ul id="itemModalRecipes"></ul>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div><!-- /.modal-content -->
+		</div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+
+	<div class="container">
+		<div class="header">
+			<span><strong>Current Path: </strong><span id="assetsPath"></span></span><br />
+			<h2>Item List</h2>
+			<label for="search">Search: </label>
+			<input type="text" id="search">
+		</div>
+		<table>
+			<thead>
+			<tr>
+				<th>Icon</th>
+				<th>Class</th>
+				<th>Rarity</th>
+				<th>Item ID</th>
+				<th>Item Name</th>
+				<th>Description</th>
+			</tr>
+			</thead>
+
+			<tbody id="itemList">
+
+			</tbody>
+		</table>
+	</div>
+
+	<script type="text/javascript" src="app.js"></script>
+	<script type="text/javascript">
+	var path = require("path"),
+		fs = require("fs");
+
+	var defaultPath = path.resolve("/Users/joshua/Library/Application Support/Steam/SteamApps/common/Starbound/assets");
+
+	$("#assetsPath").text(defaultPath);
+
+	var itemRecipes = {};
+
+	function loadModalInfo(itemName, filepath) {
+		fs.readFile(filepath, "utf8", function (err, content) {
+			$("#itemModalCode").text(content);
+			$("#itemModalRecipes").empty();
+			if (itemRecipes[itemName] !== undefined) {
+				itemRecipes[itemName].forEach(function (i) {
+					var item = document.createElement("li"),
+						itemDiv = document.createElement("div");
+
+					var outputTitle = document.createElement("h3");
+					outputTitle.innerText = i["output"]["item"] + " x " + i["output"]["count"];
+					itemDiv.appendChild(outputTitle);
+
+					var craftingTableType = document.createElement("h4");
+					craftingTableType.innerText = "Made in: " + i["groups"][0];
+					itemDiv.appendChild(craftingTableType);
+
+					var inputItems = document.createElement("ul");
+					i["input"].forEach(function (input) {
+						var inputItem = document.createElement("li");
+						inputItem.innerText = input["item"] + " x " + input["count"];
+						itemDiv.appendChild(inputItem);
+					});
+					itemDiv.appendChild(inputItems);
+
+					item.appendChild(itemDiv);
+					$("#itemModalRecipes").append(item);
+				});
+			}
+		});
+	}
+
+	var itemExcludes = {
+		".abc": true,
+		".lua": true,
+		".png": true,
+		".psd": true,
+		".ttf": true,
+		".txt": true,
+		".wav": true,
+		".ogg": true,
+		".config": true,
+		".generatedsword": true,
+		".generatedgun": true,
+		".generatedshield": true,
+		".frames": true
+	};
+
+	var itemList = $("#itemList");
+
+	function loadItem(i, nameVar) {
+		loadStarBoundJSON(i, function (res) {
+			var thisItemName = res[nameVar] === undefined ? i.substring(i.lastIndexOf("/")) : res[nameVar];
+			var realName = i.substring(i.lastIndexOf("/") + 1, i.lastIndexOf("."));
+
+			var searchData = thisItemName;
+
+			var opt = document.createElement("tr");
+			opt.setAttribute("class", "item");
+
+			var imgCon = document.createElement("td");
+			if (typeof res["inventoryIcon"] === "string" && res["inventoryIcon"].indexOf(":") === -1) {
+				var img = document.createElement("img");
+				img.src = path.join(sbResolvePath(i, res["inventoryIcon"]));
+				imgCon.appendChild(img);
+			} else if (res["inventoryIcon"] !== undefined) {
+				//imgCon.innerText = res["inventoryIcon"];
+			}
+			opt.appendChild(imgCon);
+
+			var itemClass = document.createElement("td");
+			itemClass.innerText = i.substring(i.lastIndexOf(".") + 1);
+			searchData += "$" + itemClass.innerText;
+			opt.appendChild(itemClass);
+
+			var itemRarity = document.createElement("td");
+			itemRarity.innerText = res["rarity"];
+			itemRarity.setAttribute("class", "rarity-" + res["rarity"]);
+			opt.appendChild(itemRarity);
+
+			var itemID = document.createElement("td");
+			var itemDetailLink = document.createElement("a");
+			itemDetailLink.innerText = thisItemName;
+					
+			$(itemDetailLink).click(function () {
+				var iName = realName,
+					lThisItemName = thisItemName;
+				$("#itemModalLabel").text(lThisItemName);
+				loadModalInfo(iName, i);
+				$("#itemModal").modal();
+			});
+					
+			itemID.appendChild(itemDetailLink);
+			opt.appendChild(itemID);
+
+			var itemName = document.createElement("td");
+			itemName.innerText = res["shortdescription"];
+			searchData += "$" + res["shortdescription"];
+			opt.appendChild(itemName);
+
+			var itemDescription = document.createElement("td");
+			itemDescription.innerText = res["description"];
+			searchData += "$" + res["description"];
+			opt.appendChild(itemDescription);
+
+			opt.setAttribute("data-search", searchData);
+			opt.setAttribute("data-path", i);
+			opt.setAttribute("data-name", realName);
+
+			itemList.append(opt);
+		});
+	}
+
+	getAllConfigs(path.join(defaultPath, "objects"), {".object": true}, false, function (items) {
+		items.forEach(function (i) {
+			setTimeout(function () {
+				loadItem(i, "objectName");
+			}, Math.random() * 25000);
+		});
+	});
+
+	getAllConfigs(path.join(defaultPath, "items"), itemExcludes, true, function (items) {
+		items.forEach(function (i) {
+			setTimeout(function () {
+				loadItem(i, "itemName");
+			}, Math.random() * 25000);
+		});
+	});
+
+	getAllConfigs(path.join(defaultPath, "recipes"), {".recipe": true}, false, function (items) {
+		items.forEach(function (i) {
+			setTimeout(function () {
+				loadStarBoundJSON(i, function (res) {
+					if (res["input"] === undefined || res["output"] === undefined) {
+						throw new Error("Invalid Recipe: " + i);
+					}
+					res["input"].forEach(function (i) {
+						var inputItem = i["item"];
+						if (itemRecipes[inputItem] === undefined) {
+							itemRecipes[inputItem] = [];
+						}
+						itemRecipes[inputItem].push(res);
+					});
+					var outputItem = res["output"]["item"];
+					if (itemRecipes[outputItem] === undefined) {
+						itemRecipes[outputItem] = [];
+					}
+					itemRecipes[outputItem].push(res);
+				});
+			}, Math.random() * 25000);
+		});
+	});
+
+	$("#search").keyup(function () {
+		var val = $(this).val();
+		if (val.trim().length > 0) {
+			$(".item").hide();
+			var items = document.querySelectorAll(".item")
+			for (var i = 0; i < items.length; i++) {
+				var item = items[i];
+				if (item.getAttribute("data-search").indexOf(val) > -1) {
+					$(item).show();
+				}
+			}
+		} else {
+			$(".item").show();
+		}
+	});
+
+	</script>
+</body>
+</html>
